@@ -1,0 +1,108 @@
+plugins {
+    id 'groovy'
+    id 'idea'
+}
+
+group = 'ru.otus'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.groovy:groovy-all:4.0.14'
+    testImplementation platform('org.junit:junit-bom:5.9.1')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+// https://mvnrepository.com/artifact/org.spockframework/spock-core
+    testImplementation group: 'org.spockframework', name: 'spock-core', version: '2.3-groovy-4.0'
+
+    testImplementation "org.gebish:geb-core:7.0"
+    testImplementation "org.seleniumhq.selenium:selenium-firefox-driver:4.2.2"
+    testImplementation "org.seleniumhq.selenium:selenium-support:4.2.2"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register("taskC") {
+    println "configuration block Task C"
+    doLast "doLastTaskC", {
+        println "first block Task C"
+    }
+}
+
+tasks.findByName("taskC").doLast {
+    println "doLast 1"
+}
+tasks.findByName("taskC").doLast {
+    println "doLast 2"
+}
+
+
+tasks.findByName("taskC").doFirst {
+    println "doFirst 1"
+}
+
+tasks.findByName("taskC").doFirst {
+    println "doFirst 2"
+}
+
+task taskZ {
+    var a = 0
+    group = "otus tasks"
+
+    println "configuration block Task Z ${++a}"
+
+    doFirst {
+        println "first block Task Z ${++a}"
+    }
+
+    doLast {
+        println "last block Task Z ${++a}"
+    }
+}
+
+tasks.register("taskB") {
+    dependsOn taskZ
+    println "configuration block Task B"
+}
+
+taskZ.dependsOn(taskC)
+
+task build_list {
+    group = 'build list'
+    description = 'postBuildTaskB description'
+    dependsOn build
+    doLast "build list", {
+        File srcDir
+        layout.projectDirectory.files { srcDir.listFiles() }
+        for (file in layout.projectDirectory.asFileTree.files) {
+//            println("$file")
+            logger.lifecycle "${file}"
+        }
+    }
+}
+
+
+tasks.register('list') {
+    Directory projectDirectory = layout.buildDirectory.get()
+    doLast {
+        File srcDir
+
+        def collection = projectDirectory.files { srcDir.listFiles() }
+
+        srcDir = projectDirectory.file('.').asFile
+        logger.lifecycle "Contents of $srcDir.name"
+        collection.collect { projectDirectory.asFile.relativePath(it) }.sort().each { logger.lifecycle it }
+    }
+}
+
+task postBuild {
+
+    doLast {
+        print("Post build task executed ${project.property("someProp")}")
+    }
+}
+tasks.findByName("build").dependsOn(postBuild)
